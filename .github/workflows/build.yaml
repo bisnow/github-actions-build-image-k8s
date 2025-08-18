@@ -1,0 +1,179 @@
+name: Build Docker Image and Update Tag
+description: Reusable workflow to build docker image and update image tag in kustomization
+
+permissions:
+  id-token: write
+  contents: write
+  pull-requests: read
+
+env:
+  TAG: dev-${{ github.run_number }}
+  RUN_NUMBER: ${{ github.run_number }}
+
+on:
+  workflow_call:
+    inputs:
+      service-name:
+        description: The name of the service to deploy
+        required: true
+        type: string
+
+      registry:
+        description: The ECR registry URL to push images to
+        required: true
+        type: string
+
+      path-to-k8s-image-tag:
+        description: The path to the kustomization.yaml file containing the image tag
+        required: true
+        type: string
+      
+      branch-override:
+        description: The branch that will be updated (usually main)
+        required: false
+        type: string
+        default: main
+
+      aws-account:
+        description: AWS account identifier
+        required: false
+        type: string
+        default: bisnow
+
+      platforms:
+        description: Docker platforms to build for
+        required: false
+        type: string
+        default: linux/arm64
+
+      flux-target-branch:
+        description: The branch that flux watches (usually flux-main)
+        required: false
+        type: string
+        default: flux-main
+
+      exclude-paths:
+        description: Regex pattern for paths to exclude from build change detection
+        required: false
+        type: string
+        default: '^(\.k8s/|k8s/|\.github/)'
+
+jobs:
+  check-for-build-changes:
+    name: Check for Build-Relevant Changes
+    runs-on: ubuntu-latest
+    outputs:
+      build_container: ${{ steps.filter.outputs.build_container }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Check for relevant changes
+        id: filter
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "Manual run: building container"
+            echo "build_container=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          CHANGED=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -vE "${{ inputs.exclude-paths }}" || true)
+          if [[ -n "$CHANGED" ]]; then
+            echo "Changes found that require container build:"
+            echo "$CHANGED"
+            echo "build_container=true" >> $GITHUB_OUTPUT
+          else
+            echo "No changes found that require container build"
+            echo "build_container=false" >> $GITHUB_OUTPUT
+          fi
+
+  build-and-push:
+    name: Build and Push Docker Image to ECR
+    runs-on: ubuntu-latest
+    needs: check-for-build-changes
+    if: needs.check-for-build-changes.outputs.build_container == 'true'
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      
+      - name: Build and Push Image to ECR (${{ env.TAG }})
+        uses: bisnow/github-actions-build-and-push-image@v2.1
+        with:
+          aws-account: ${{ inputs.aws-account }}
+          platforms: ${{ inputs.platforms }}
+          registry: ${{ inputs.registry }}
+          build-assets: true
+          image-tag: ${{ env.TAG }}
+
+  update-image-tag:
+    name: Update Kustomize Image Tag in Manifest
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    if: needs.build-and-push.result == 'success' && needs.build-and-push.result != 'skipped'
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      
+      - name: Update manifest image to ${{ env.TAG }}
+        run: |
+          echo "Updating image tag in ${{ inputs.path-to-k8s-image-tag }}"
+          # Verify the file exists
+          if [[ ! -f "${{ inputs.path-to-k8s-image-tag }}" ]]; then
+            echo "Error: Kustomization file not found at ${{ inputs.path-to-k8s-image-tag }}"
+            exit 1
+          fi
+          
+          # Update the image tag in the manifest 
+          if ! sed -i "s|newTag: .*|newTag: ${{ env.TAG }}|" "${{ inputs.path-to-k8s-image-tag }}"; then
+            echo "Error: Failed to update image tag in ${{ inputs.path-to-k8s-image-tag }}"
+            exit 1
+          fi
+          
+          # Verify the change was made
+          if ! grep -q "newTag: ${{ env.TAG }}" "${{ inputs.path-to-k8s-image-tag }}"; then
+            echo "Error: Image tag was not updated correctly"
+            cat "${{ inputs.path-to-k8s-image-tag }}"
+            exit 1
+          fi
+          
+          echo "Successfully updated image tag to ${{ env.TAG }}"
+      
+      - name: Commit and push manifest update for ${{ env.TAG }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "${{ inputs.path-to-k8s-image-tag }}"
+          
+          # Check if there are changes to commit
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          
+          git commit -m "chore(${{ inputs.service-name }}): update dev image to ${{ env.TAG }}"
+          git pull --rebase origin ${{ inputs.branch-override }}
+          git push
+
+  update-flux-branch:
+    name: Force-update flux branch to match deployment branch
+    runs-on: ubuntu-latest
+    needs: [check-for-build-changes, update-image-tag]
+    if: always() && needs.check-for-build-changes.outputs.build_container == 'true' && needs.update-image-tag.result == 'success'
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Ensure local branch is up to date with remote
+        run: |
+          git fetch origin
+          git checkout ${{ inputs.branch-override }}
+          git reset --hard origin/${{ inputs.branch-override }}
+      
+      - name: Force-update ${{ inputs.flux-target-branch }} to match ${{ inputs.branch-override }}
+        run: |
+          echo "Force-pushing ${{ inputs.branch-override }} to ${{ inputs.flux-target-branch }}"
+          git push origin ${{ inputs.branch-override }}:${{ inputs.flux-target-branch }} --force
