@@ -58,6 +58,12 @@ on:
         type: string
         default: '^(\.k8s/|k8s/|\.github/)'
 
+      no-composer:
+        description: Whether to use the composer to build the image
+        required: false
+        type: boolean
+        default: false
+
 jobs:
   check-for-build-changes:
     name: Check for Build-Relevant Changes
@@ -106,6 +112,7 @@ jobs:
           registry: ${{ inputs.registry }}
           build-assets: true
           image-tag: ${{ env.TAG }}
+          no-composer: 
 
   update-image-tag:
     name: Update Kustomize Image Tag in Manifest
