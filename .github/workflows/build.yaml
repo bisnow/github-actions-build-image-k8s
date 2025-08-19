@@ -64,6 +64,11 @@ on:
         type: boolean
         default: false
 
+      build-assets:
+        description: 'Build assets'
+        required: false
+        default: ''
+
 jobs:
   check-for-build-changes:
     name: Check for Build-Relevant Changes
@@ -110,7 +115,7 @@ jobs:
           aws-account: ${{ inputs.aws-account }}
           platforms: ${{ inputs.platforms }}
           registry: ${{ inputs.registry }}
-          build-assets: true
+          build-assets: ${{ inputs.build-assets }}
           image-tag: ${{ env.TAG }}
           no-composer: ${{ inputs.no-composer }}
 
