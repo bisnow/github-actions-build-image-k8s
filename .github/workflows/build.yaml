@@ -112,7 +112,7 @@ jobs:
           registry: ${{ inputs.registry }}
           build-assets: true
           image-tag: ${{ env.TAG }}
-          no-composer: 
+          no-composer: ${{ inputs.no-composer }}
 
   update-image-tag:
     name: Update Kustomize Image Tag in Manifest
