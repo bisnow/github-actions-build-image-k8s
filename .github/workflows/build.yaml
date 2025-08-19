@@ -67,6 +67,7 @@ on:
       build-assets:
         description: 'Build assets'
         required: false
+        type: string
         default: ''
 
 jobs:
