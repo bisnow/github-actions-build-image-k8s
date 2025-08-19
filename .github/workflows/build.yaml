@@ -156,24 +156,24 @@ jobs:
           git pull --rebase origin ${{ inputs.branch-override }}
           git push
 
-  update-flux-branch:
-    name: Force-update flux branch to match deployment branch
-    runs-on: ubuntu-latest
-    needs: [check-for-build-changes, update-image-tag]
-    if: always() && needs.check-for-build-changes.outputs.build_container == 'true' && needs.update-image-tag.result == 'success'
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+  # update-flux-branch:
+  #   name: Force-update flux branch to match deployment branch
+  #   runs-on: ubuntu-latest
+  #   needs: [check-for-build-changes, update-image-tag]
+  #   if: always() && needs.check-for-build-changes.outputs.build_container == 'true' && needs.update-image-tag.result == 'success'
+  #   steps:
+  #     - name: Checkout Repository
+  #       uses: actions/checkout@v4
+  #       with:
+  #         fetch-depth: 0
       
-      - name: Ensure local branch is up to date with remote
-        run: |
-          git fetch origin
-          git checkout ${{ inputs.branch-override }}
-          git reset --hard origin/${{ inputs.branch-override }}
+  #     - name: Ensure local branch is up to date with remote
+  #       run: |
+  #         git fetch origin
+  #         git checkout ${{ inputs.branch-override }}
+  #         git reset --hard origin/${{ inputs.branch-override }}
       
-      - name: Force-update ${{ inputs.flux-target-branch }} to match ${{ inputs.branch-override }}
-        run: |
-          echo "Force-pushing ${{ inputs.branch-override }} to ${{ inputs.flux-target-branch }}"
-          git push origin ${{ inputs.branch-override }}:${{ inputs.flux-target-branch }} --force
+  #     - name: Force-update ${{ inputs.flux-target-branch }} to match ${{ inputs.branch-override }}
+  #       run: |
+  #         echo "Force-pushing ${{ inputs.branch-override }} to ${{ inputs.flux-target-branch }}"
+  #         git push origin ${{ inputs.branch-override }}:${{ inputs.flux-target-branch }} --force
