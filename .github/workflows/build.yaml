@@ -70,6 +70,12 @@ on:
         type: string
         default: ''
 
+    secrets:
+      FLUXUI_USERNAME:
+        required: false
+      FLUXUI_TOKEN:
+        required: false
+
 jobs:
   check-for-build-changes:
     name: Check for Build-Relevant Changes
