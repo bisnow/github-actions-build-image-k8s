@@ -120,7 +120,7 @@ jobs:
         if: ${{ !inputs.no-composer }} 
         run: |
           composer config -g http-basic.composer.fluxui.dev ${{ secrets.FLUXUI_USERNAME }} ${{ secrets.FLUXUI_TOKEN }}
-          composer config -g github-oauth.github.com ${{ secrets.COMPOSER_OAUTH_GITHUB_ACTIONS }}
+          # composer config -g github-oauth.github.com ${{ secrets.COMPOSER_OAUTH_GITHUB_ACTIONS }}
       
       - name: Build and Push Image to ECR (${{ env.TAG }})
         uses: bisnow/github-actions-build-and-push-image@v2.1
