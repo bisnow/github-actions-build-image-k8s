@@ -69,12 +69,19 @@ on:
         required: false
         type: string
         default: ''
-
-    # secrets:
-    #   FLUXUI_USERNAME:
-    #     required: false
-    #   FLUXUI_TOKEN:
-    #     required: false
+    
+    secrets:
+      FLUXUI_USERNAME:
+        description: Username for FluxUI Composer authentication
+        required: false
+      
+      FLUXUI_TOKEN:
+        description: Token for FluxUI Composer authentication
+        required: false
+      
+      COMPOSER_OAUTH_GITHUB_ACTIONS:
+        description: GitHub OAuth token for Composer authentication
+        required: false
 
 jobs:
   check-for-build-changes:
@@ -116,11 +123,24 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
       
-      # - name: Configure Composer authentication
-      #   if: ${{ !inputs.no-composer }} 
-      #   run: |
-      #     composer config -g http-basic.composer.fluxui.dev ${{ secrets.FLUXUI_USERNAME }} ${{ secrets.FLUXUI_TOKEN }}
-      #     # composer config -g github-oauth.github.com ${{ secrets.COMPOSER_OAUTH_GITHUB_ACTIONS }}
+      - name: Configure Composer authentication
+        if: ${{ !inputs.no-composer }}
+        run: |
+          # Configure FluxUI authentication if secrets exist
+          if [[ -n "${{ secrets.FLUXUI_USERNAME }}" && -n "${{ secrets.FLUXUI_TOKEN }}" ]]; then
+            echo "Configuring FluxUI authentication..."
+            composer config -g http-basic.composer.fluxui.dev ${{ secrets.FLUXUI_USERNAME }} ${{ secrets.FLUXUI_TOKEN }}
+          else
+            echo "FluxUI credentials not found, skipping FluxUI authentication"
+          fi
+          
+          # Configure GitHub OAuth if secret exists
+          if [[ -n "${{ secrets.COMPOSER_OAUTH_GITHUB_ACTIONS }}" ]]; then
+            echo "Configuring GitHub OAuth authentication..."
+            composer config -g github-oauth.github.com ${{ secrets.COMPOSER_OAUTH_GITHUB_ACTIONS }}
+          else
+            echo "GitHub OAuth token not found, skipping GitHub authentication"
+          fi
       
       - name: Build and Push Image to ECR (${{ env.TAG }})
         uses: bisnow/github-actions-build-and-push-image@v2.1
