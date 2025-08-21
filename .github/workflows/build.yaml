@@ -69,6 +69,22 @@ on:
         required: false
         type: string
         default: ''
+
+      composer-oauth:
+        description: 'Composer OAuth token'
+        required: false
+        type: string
+        default: ''
+
+      dev-package:
+        description: 'Dev package to install'
+        required: false
+        default: no
+
+      no-composer:
+        description: 'Do not run composer install'
+        required: false
+        default: ''
     
     secrets:
       FLUXUI_USERNAME:
@@ -122,25 +138,46 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        
+      - name: Install dependencies with oauth
+        if: ${{ inputs.no-composer == '' && inputs.composer-oauth != '' }}
+        uses: php-actions/composer@v6
+        env:
+          COMPOSER_AUTH: |
+            {
+              "github-oauth": {
+                "github.com": "${{ inputs.composer-oauth }}"
+              },
+              "http-basic": {
+                "composer.fluxui.dev": {
+                  "username": "${{ secrets.FLUXUI_USERNAME }}",
+                  "password": "${{ secrets.FLUXUI_TOKEN }}"
+                }
+              }
+            }
+        with:
+          dev: ${{ inputs.dev-package }}
+          args: --profile --ignore-platform-reqs --optimize-autoloader
+          memory_limit: -1
+
+      - name: Install dependencies no oauth
+        if: ${{ inputs.no-composer == '' && inputs.composer-oauth == '' }}
+        uses: php-actions/composer@v6
+        env:
+          COMPOSER_AUTH: |
+            {
+              "http-basic": {
+                "composer.fluxui.dev": {
+                  "username": "${{ secrets.FLUXUI_USERNAME }}",
+                  "password": "${{ secrets.FLUXUI_TOKEN }}"
+                }
+              }
+            }
+        with:
+          dev: ${{ inputs.dev-package }}
+          args: --profile --ignore-platform-reqs --optimize-autoloader
+          memory_limit: -1
       
-      - name: Configure Composer authentication
-        if: ${{ !inputs.no-composer }}
-        run: |
-          # Configure FluxUI authentication if secrets exist
-          if [[ -n "${{ secrets.FLUXUI_USERNAME }}" && -n "${{ secrets.FLUXUI_TOKEN }}" ]]; then
-            echo "Configuring FluxUI authentication..."
-            composer config -g http-basic.composer.fluxui.dev ${{ secrets.FLUXUI_USERNAME }} ${{ secrets.FLUXUI_TOKEN }}
-          else
-            echo "FluxUI credentials not found, skipping FluxUI authentication"
-          fi
-          
-          # Configure GitHub OAuth if secret exists
-          if [[ -n "${{ secrets.COMPOSER_OAUTH_GITHUB_ACTIONS }}" ]]; then
-            echo "Configuring GitHub OAuth authentication..."
-            composer config -g github-oauth.github.com ${{ secrets.COMPOSER_OAUTH_GITHUB_ACTIONS }}
-          else
-            echo "GitHub OAuth token not found, skipping GitHub authentication"
-          fi
       
       - name: Build and Push Image to ECR (${{ env.TAG }})
         uses: bisnow/github-actions-build-and-push-image@v2.1
@@ -151,6 +188,7 @@ jobs:
           build-assets: ${{ inputs.build-assets }}
           image-tag: ${{ env.TAG }}
           no-composer: ${{ inputs.no-composer }}
+          composer-oauth: ${{ inputs.composer-oauth || secrets.COMPOSER_OAUTH_GITHUB_ACTIONS }}
 
   update-image-tag:
     name: Update Kustomize Image Tag in Manifest
