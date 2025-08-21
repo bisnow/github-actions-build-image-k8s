@@ -56,7 +56,7 @@ on:
         description: Regex pattern for paths to exclude from build change detection
         required: false
         type: string
-        default: '^(\.k8s/|k8s/|\.github/)'
+        default: '^(\.k8s/|k8s/|\.github/|aws-resources\.yaml$)'
 
       build-assets:
         description: 'Build assets'
