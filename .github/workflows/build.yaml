@@ -58,14 +58,14 @@ on:
         type: string
         default: '^(\.k8s/|k8s/|\.github/)'
 
-      no-composer:
-        description: Whether to use the composer to build the image
-        required: false
-        type: boolean
-        default: false
-
       build-assets:
         description: 'Build assets'
+        required: false
+        type: string
+        default: ''
+
+      no-composer:
+        description: 'Do not run composer install'
         required: false
         type: string
         default: ''
@@ -79,12 +79,8 @@ on:
       dev-package:
         description: 'Dev package to install'
         required: false
+        type: string
         default: no
-
-      no-composer:
-        description: 'Do not run composer install'
-        required: false
-        default: ''
     
     secrets:
       FLUXUI_USERNAME:
