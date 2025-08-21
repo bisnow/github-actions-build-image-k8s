@@ -139,18 +139,7 @@ jobs:
         if: ${{ inputs.no-composer == '' && inputs.composer-oauth != '' }}
         uses: php-actions/composer@v6
         env:
-          COMPOSER_AUTH: |
-            {
-              "github-oauth": {
-                "github.com": "${{ inputs.composer-oauth }}"
-              },
-              "http-basic": {
-                "composer.fluxui.dev": {
-                  "username": "${{ secrets.FLUXUI_USERNAME }}",
-                  "password": "${{ secrets.FLUXUI_TOKEN }}"
-                }
-              }
-            }
+          COMPOSER_AUTH: '{"github-oauth":{"github.com":"${{ inputs.composer-oauth }}"},"http-basic":{"composer.fluxui.dev":{"username":"${{ secrets.FLUXUI_USERNAME }}","password":"${{ secrets.FLUXUI_TOKEN }}"}}}'
         with:
           dev: ${{ inputs.dev-package }}
           args: --profile --ignore-platform-reqs --optimize-autoloader
@@ -160,15 +149,7 @@ jobs:
         if: ${{ inputs.no-composer == '' && inputs.composer-oauth == '' }}
         uses: php-actions/composer@v6
         env:
-          COMPOSER_AUTH: |
-            {
-              "http-basic": {
-                "composer.fluxui.dev": {
-                  "username": "${{ secrets.FLUXUI_USERNAME }}",
-                  "password": "${{ secrets.FLUXUI_TOKEN }}"
-                }
-              }
-            }
+          COMPOSER_AUTH: '{"http-basic":{"composer.fluxui.dev":{"username":"${{ secrets.FLUXUI_USERNAME }}","password":"${{ secrets.FLUXUI_TOKEN }}"}}}'
         with:
           dev: ${{ inputs.dev-package }}
           args: --profile --ignore-platform-reqs --optimize-autoloader
