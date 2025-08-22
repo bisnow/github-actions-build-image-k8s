@@ -8,9 +8,13 @@ This workflow automates the complete CI/CD pipeline for containerized applicatio
 
 1. **Smart Build Detection** - Analyzes changed files to determine if a container rebuild is necessary
 2. **Docker Image Build** - Builds and pushes Docker images to Amazon ECR with support for multi-platform builds
-3. **Dependency Management** - Handles PHP Composer dependencies with OAuth authentication support
-4. **Manifest Updates** - Automatically updates Kustomize image tags in your Kubernetes manifests
-5. **GitOps Integration** - Commits the updated manifests back to your repository for GitOps workflows
+3. **Advanced Dependency Management** - Handles PHP Composer dependencies with support for:
+   - GitHub OAuth authentication for private repositories
+   - FluxUI authentication for private Flux packages
+   - Automatic fallback handling when authentication is not needed
+4. **Asset Building** - Supports Node.js/npm asset compilation during the build process
+5. **Manifest Updates** - Automatically updates Kustomize image tags in your Kubernetes manifests
+6. **GitOps Integration** - Commits the updated manifests back to your repository for GitOps workflows
 
 The workflow uses intelligent change detection to skip unnecessary builds when only configuration files or documentation are modified.
 
@@ -33,7 +37,7 @@ The workflow uses intelligent change detection to skip unnecessary builds when o
 | `exclude-paths` | Regex pattern for paths to exclude from build detection | `^(\.k8s/|k8s/|\.github/|aws-resources\.yaml$)` |
 | `build-assets` | Whether to build assets during the Docker build | `''` |
 | `no-composer` | Skip running composer install | `''` |
-| `composer-oauth` | Composer OAuth token for private repositories | `''` |
+| `composer-oauth` | GitHub OAuth token for private Composer repositories | `''` |
 | `dev-package` | Whether to install dev packages with Composer | `no` |
 
 ## Optional Secrets
