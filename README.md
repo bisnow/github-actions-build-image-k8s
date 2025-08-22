@@ -44,9 +44,16 @@ The workflow uses intelligent change detection to skip unnecessary builds when o
 
 | Secret | Description | When Required |
 |--------|-------------|---------------|
-| `FLUXUI_USERNAME` | Username for FluxUI Composer authentication | Required if using Composer with private FluxUI repositories |
-| `FLUXUI_TOKEN` | Token for FluxUI Composer authentication | Required if using Composer with private FluxUI repositories |
-| `COMPOSER_OAUTH_GITHUB_ACTIONS` | GitHub OAuth token for Composer authentication | Required if using Composer with private GitHub repositories |
+| `FLUXUI_USERNAME` | Email address associated with your FluxUI account | Required when using private FluxUI/Flux packages |
+| `FLUXUI_TOKEN` | FluxUI license key from https://fluxui.dev/dashboard | Required when using private FluxUI/Flux packages |
+| `COMPOSER_OAUTH_GITHUB_ACTIONS` | GitHub OAuth token for Composer authentication | Required when using private GitHub Composer packages |
+
+### FluxUI Authentication
+If your application uses FluxUI/Flux packages, you'll need to provide both `FLUXUI_USERNAME` and `FLUXUI_TOKEN`:
+- **Username**: Your FluxUI account email address
+- **Token**: Your license key available from your FluxUI dashboard
+
+The workflow automatically configures Composer authentication when these secrets are provided.
 
 ## Required Permissions
 
@@ -89,9 +96,11 @@ jobs:
       path-to-k8s-image-tag: .k8s/overlays/dev/kustomization.yaml
       build-assets: "true"
       branch-override: devops/k8s-deploy
+      composer-oauth: ${{ secrets.COMPOSER_OAUTH_GITHUB_ACTIONS }}
     secrets:
       FLUXUI_USERNAME: ${{ secrets.FLUXUI_USERNAME }}
       FLUXUI_TOKEN: ${{ secrets.FLUXUI_TOKEN }}
+      COMPOSER_OAUTH_GITHUB_ACTIONS: ${{ secrets.COMPOSER_OAUTH_GITHUB_ACTIONS }}
 ```
 
 ## Additional Examples
@@ -119,6 +128,23 @@ jobs:
       platforms: linux/amd64,linux/arm64
 ```
 
+### With FluxUI Authentication
+```yaml
+jobs:
+  build-and-push:
+    uses: bisnow/github-actions-build-image-k8s/.github/workflows/build.yaml@main
+    with:
+      service-name: my-laravel-app
+      registry: 123456789012.dkr.ecr.us-east-1.amazonaws.com/my-laravel-app
+      path-to-k8s-image-tag: k8s/overlays/production/kustomization.yaml
+      build-assets: "true"
+      composer-oauth: ${{ secrets.COMPOSER_OAUTH_GITHUB_ACTIONS }}
+    secrets:
+      FLUXUI_USERNAME: ${{ secrets.FLUXUI_USERNAME }}
+      FLUXUI_TOKEN: ${{ secrets.FLUXUI_TOKEN }}
+      COMPOSER_OAUTH_GITHUB_ACTIONS: ${{ secrets.COMPOSER_OAUTH_GITHUB_ACTIONS }}
+```
+
 ### Skip Composer for Non-PHP Applications
 ```yaml
 jobs:
@@ -135,10 +161,14 @@ jobs:
 
 1. **Change Detection**: The workflow analyzes git diff to determine if files outside of the exclude pattern have changed
 2. **Conditional Build**: Only proceeds with the build if relevant changes are detected or if manually triggered
-3. **Composer Setup**: Installs PHP dependencies with proper authentication if needed
-4. **Docker Build**: Uses the `bisnow/github-actions-build-and-push-image` action to build and push to ECR
-5. **Manifest Update**: Updates the `newTag` field in your Kustomize manifest file
-6. **Git Commit**: Commits the updated manifest back to the specified branch
+3. **Authentication Setup**: Automatically configures authentication for:
+   - FluxUI/Flux packages (if secrets provided)
+   - GitHub private repositories (if OAuth token provided)
+4. **Dependency Installation**: Installs PHP Composer dependencies with proper authentication
+5. **Asset Building**: Compiles frontend assets using Node.js/npm if enabled
+6. **Docker Build**: Uses the `bisnow/github-actions-build-and-push-image` action to build and push to ECR
+7. **Manifest Update**: Updates the `newTag` field in your Kustomize manifest file
+8. **Git Commit**: Commits the updated manifest back to the specified branch
 
 ## Image Tagging
 
@@ -147,9 +177,11 @@ Images are tagged with the pattern: `dev-{run_number}` where `run_number` is the
 ## Dependencies
 
 This workflow depends on:
-- `bisnow/github-actions-build-and-push-image@v2.1`
+- `bisnow/github-actions-build-and-push-image@v2.2` (with built-in FluxUI support)
 - `actions/checkout@v4`
-- `php-actions/composer@v6`
+
+### Previous Dependencies (No Longer Required)
+- `php-actions/composer@v6` - Composer installation is now handled by the build action
 
 ## Notes
 
