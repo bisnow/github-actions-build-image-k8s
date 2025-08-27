@@ -135,29 +135,8 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
         
-      - name: Install dependencies with oauth
-        if: ${{ inputs.no-composer == '' && inputs.composer-oauth != '' }}
-        uses: php-actions/composer@v6
-        env:
-          COMPOSER_AUTH: '{"github-oauth":{"github.com":"${{ inputs.composer-oauth }}"},"http-basic":{"composer.fluxui.dev":{"username":"${{ secrets.FLUXUI_USERNAME }}","password":"${{ secrets.FLUXUI_TOKEN }}"}}}'
-        with:
-          dev: ${{ inputs.dev-package }}
-          args: --profile --ignore-platform-reqs --optimize-autoloader
-          memory_limit: -1
-
-      - name: Install dependencies no oauth
-        if: ${{ inputs.no-composer == '' && inputs.composer-oauth == '' }}
-        uses: php-actions/composer@v6
-        env:
-          COMPOSER_AUTH: '{"http-basic":{"composer.fluxui.dev":{"username":"${{ secrets.FLUXUI_USERNAME }}","password":"${{ secrets.FLUXUI_TOKEN }}"}}}'
-        with:
-          dev: ${{ inputs.dev-package }}
-          args: --profile --ignore-platform-reqs --optimize-autoloader
-          memory_limit: -1
-      
-      
       - name: Build and Push Image to ECR (${{ env.TAG }})
-        uses: bisnow/github-actions-build-and-push-image@v2.1
+        uses: bisnow/github-actions-build-and-push-image@v2.2
         with:
           aws-account: ${{ inputs.aws-account }}
           platforms: ${{ inputs.platforms }}
@@ -166,6 +145,9 @@ jobs:
           image-tag: ${{ env.TAG }}
           no-composer: ${{ inputs.no-composer }}
           composer-oauth: ${{ inputs.composer-oauth || secrets.COMPOSER_OAUTH_GITHUB_ACTIONS }}
+          flux-license-key: ${{ secrets.FLUXUI_TOKEN }}
+          flux-username: ${{ secrets.FLUXUI_USERNAME }}
+          dev-package: ${{ inputs.dev-package }}
 
   update-image-tag:
     name: Update Kustomize Image Tag in Manifest
