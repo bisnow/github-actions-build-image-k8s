@@ -98,7 +98,7 @@ on:
 jobs:
   check-for-build-changes:
     name: Check for Build-Relevant Changes
-    runs-on: ubuntu-latest
+    runs-on: arc-runners-bisnow
     outputs:
       build_container: ${{ steps.filter.outputs.build_container }}
     steps:
@@ -128,7 +128,7 @@ jobs:
 
   build-and-push:
     name: Build and Push Docker Image to ECR
-    runs-on: ubuntu-latest
+    runs-on: arc-runners-bisnow
     needs: check-for-build-changes
     if: needs.check-for-build-changes.outputs.build_container == 'true'
     steps:
@@ -151,7 +151,7 @@ jobs:
 
   update-image-tag:
     name: Update Kustomize Image Tag in Manifest
-    runs-on: ubuntu-latest
+    runs-on: arc-runners-bisnow
     needs: build-and-push
     if: needs.build-and-push.result == 'success' && needs.build-and-push.result != 'skipped'
     steps:
