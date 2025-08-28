@@ -134,9 +134,9 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-        
+
       - name: Build and Push Image to ECR (${{ env.TAG }})
-        uses: bisnow/github-actions-build-and-push-image@v2.2
+        uses: bisnow/github-actions-build-and-push-image@v2.2.1
         with:
           aws-account: ${{ inputs.aws-account }}
           platforms: ${{ inputs.platforms }}
